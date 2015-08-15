@@ -76,3 +76,10 @@ BROWSERID_DISABLED = False
 
 # Don't actually use celery in tests
 CELERY_ALWAYS_EAGER = True
+
+SCREENCAPTURES_NO_PICTURES = 5 # faster
+
+# Deliberately disabled since reducing the size of PNGs
+# slows down the tests significantly and we have deliberate
+# tests that re-enables it.
+PNGQUANT_LOCATION = None

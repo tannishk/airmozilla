@@ -1,6 +1,5 @@
 import datetime
 
-from django.test import TestCase
 from django.contrib.auth.models import User, Group, Permission
 from django.core import mail
 from django.test.client import RequestFactory
@@ -9,8 +8,8 @@ from django.utils import timezone
 from nose.tools import ok_
 from funfactory.urlresolvers import reverse
 
+from airmozilla.base.tests.testbase import DjangoTestCase
 from airmozilla.suggest import sending
-
 from airmozilla.main.models import (
     Event,
     SuggestedEvent,
@@ -19,13 +18,8 @@ from airmozilla.main.models import (
 )
 
 
-class TestSending(TestCase):
-    fixtures = ['airmozilla/manage/tests/main_testdata.json']
+class TestSending(DjangoTestCase):
     placeholder = 'airmozilla/manage/tests/firefox.png'
-
-    def shortDescription(self):
-        # Stop nose using the test docstring and instead the test method name.
-        pass
 
     def test_email_about_suggested_event_comment(self):
         # first we need to add two users
@@ -34,7 +28,7 @@ class TestSending(TestCase):
             email='zandr@mozilla.com'
         )
         permission = Permission.objects.get(codename='add_event')
-        group = Group.objects.get(name='testapprover')
+        group = Group.objects.create(name='testapprover')
         group.permissions.add(permission)
         zandr.groups.add(group)
 
@@ -86,7 +80,7 @@ class TestSending(TestCase):
             email='zandr@mozilla.com'
         )
         permission = Permission.objects.get(codename='add_event')
-        group = Group.objects.get(name='testapprover')
+        group = Group.objects.create(name='testapprover')
         group.permissions.add(permission)
         zandr.groups.add(group)
 

@@ -6,7 +6,6 @@ import uuid
 import mock
 
 from django.core.cache import cache
-from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core import mail
 
@@ -14,7 +13,7 @@ from funfactory.urlresolvers import reverse
 from nose.tools import eq_, ok_
 
 from airmozilla.main.models import Event
-from airmozilla.base.tests.testbase import Response
+from airmozilla.base.tests.testbase import Response, DjangoTestCase
 from airmozilla.comments.views import (
     can_manage_comments,
     get_latest_comment
@@ -63,8 +62,7 @@ MOZILLIAN_USER = """
 """
 
 
-class TestComments(TestCase):
-    fixtures = ['airmozilla/manage/tests/main_testdata.json']
+class TestComments(DjangoTestCase):
 
     def _create_discussion(self, event, enabled=True, moderate_all=True,
                            notify_all=True):

@@ -1,10 +1,10 @@
 from nose.tools import ok_
 
-from django.test import TestCase
 from django.core.files import File
 
 from funfactory.urlresolvers import reverse
 
+from airmozilla.base.tests.testbase import DjangoTestCase
 from airmozilla.manage import widgets
 from airmozilla.main.models import (
     Event,
@@ -12,9 +12,7 @@ from airmozilla.main.models import (
 )
 
 
-class TestWidgets(TestCase):
-    fixtures = ['airmozilla/manage/tests/main_testdata.json']
-    main_image = 'airmozilla/manage/tests/firefox.png'
+class TestWidgets(DjangoTestCase):
 
     def test_picture_gallery_widget(self):
 

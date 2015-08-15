@@ -43,8 +43,6 @@ from airmozilla.base.tests.testbase import DjangoTestCase
 
 
 class TestPages(DjangoTestCase):
-    fixtures = ['airmozilla/manage/tests/main_testdata.json']
-    main_image = 'airmozilla/manage/tests/firefox.png'
 
     def setUp(self):
         super(TestPages, self).setUp()
@@ -53,8 +51,6 @@ class TestPages(DjangoTestCase):
         event.start_time = timezone.now()
         event.archive_time = None
         event.save()
-
-        self._upload_media(self.main_image)
 
         self.main_channel = Channel.objects.get(
             slug=settings.DEFAULT_CHANNEL_SLUG
@@ -316,7 +312,7 @@ class TestPages(DjangoTestCase):
         """Event view page loads correctly if the event is public and
            scheduled and approved; request a login otherwise."""
         event = Event.objects.get(title='Test event')
-        group = Group.objects.get()
+        group = Group.objects.create(name='testapprover')
         approval = Approval(event=event, group=group)
         approval.save()
         event_page = reverse('main:event', kwargs={'slug': event.slug})
@@ -489,7 +485,7 @@ class TestPages(DjangoTestCase):
         date = datetime.datetime(2099, 1, 1, 18, 0, 0).replace(tzinfo=utc)
         event.start_time = date
         event.save()
-        group = Group.objects.get()
+        group = Group.objects.create(name='testapprover')
         approval = Approval(event=event, group=group)
         approval.approved = True
         approval.save()
@@ -1465,7 +1461,7 @@ class TestPages(DjangoTestCase):
             description="""
             <p>The description</p>
             """,
-            image='animage.png',
+            image='firefox.png',
         )
 
         event = Event.objects.create(
@@ -1551,7 +1547,7 @@ class TestPages(DjangoTestCase):
             description="""
             <p>The description</p>
             """,
-            image='animage.png',
+            image='firefox.png',
         )
         event = Event.objects.get(title='Test event')
         one = Event.objects.create(
@@ -1627,7 +1623,7 @@ class TestPages(DjangoTestCase):
             description="""
             <p>The description</p>
             """,
-            image='animage.png',
+            image='firefox.png',
         )
 
         for i in range(1, 40):
@@ -3250,7 +3246,8 @@ class TestPages(DjangoTestCase):
         ok_(event.title in response.content)
 
         # make it depend on approval
-        group, = Group.objects.all()
+
+        group = Group.objects.create(name='testapprover')
         approval = Approval.objects.create(
             event=event,
             group=group
@@ -3282,3 +3279,42 @@ class TestPages(DjangoTestCase):
         eq_(response.status_code, 200)
         ok_('Streaming Live Now' in response.content)
         ok_(event.title in response.content)
+
+    def test_thumbnails(self):
+        event = Event.objects.get(title='Test event')
+
+        url = reverse('main:thumbnails')
+        response = self.client.get(url)
+        eq_(response.status_code, 400)
+
+        response = self.client.get(url, {'id': event.id})
+        eq_(response.status_code, 400)
+
+        response = self.client.get(url, {
+            'id': event.id,
+            'width': 'xxx',
+            'height': '90'
+        })
+        eq_(response.status_code, 400)
+
+        response = self.client.get(url, {
+            'id': event.id,
+            'width': '160',
+            'height': '90'
+        })
+        eq_(response.status_code, 200)
+        eq_(json.loads(response.content)['thumbnails'], [])
+
+        # make some pictures for this
+        for i in range(4):
+            with open(self.main_image) as fp:
+                Picture.objects.create(file=File(fp), event=event)
+
+        response = self.client.get(url, {
+            'id': event.id,
+            'width': '160',
+            'height': '90'
+        })
+        eq_(response.status_code, 200)
+        thumbnail_urls = json.loads(response.content)['thumbnails']
+        eq_(len(thumbnail_urls), 4)

@@ -11,6 +11,7 @@ from django.contrib.sites.models import RequestSite
 from django.shortcuts import get_object_or_404, redirect, render
 from django.core.cache import cache
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 from django.utils import timezone
 from django.utils.timezone import utc
 from django.contrib.syndication.views import Feed
@@ -44,6 +45,7 @@ from airmozilla.base.utils import (
     edgecast_tokenize,
     akamai_tokenize,
 )
+from airmozilla.main.helpers import thumbnail
 from airmozilla.search.models import LoggedSearch
 from airmozilla.comments.models import Discussion
 from airmozilla.surveys.models import Survey
@@ -780,7 +782,10 @@ class EventEditView(EventView):
                     ):
                         current_value = event.picture.file.url
                     else:
-                        current_value = event.placeholder_img.url
+                        if event.placeholder_img:
+                            current_value = event.placeholder_img.url
+                        else:
+                            current_value = None
 
                 elif key == 'tags':
                     current_value = ', '.join(x.name for x in event.tags.all())
@@ -843,7 +848,11 @@ class EventEditView(EventView):
                 elif key == 'placeholder_img':
                     if value:
                         changes[key] = {
-                            'from': event.placeholder_img.url,
+                            'from': (
+                                event.placeholder_img and
+                                event.placeholder_img.url or
+                                ''
+                            ),
                             'to': '__saved__event_placeholder_img'
                         }
                         event.placeholder_img = value
@@ -867,7 +876,7 @@ class EventEditView(EventView):
                 if key in changes:
                     # you wanted to change it, but has your reference changed
                     # since you loaded it?
-                    previous_value = previous[key]
+                    previous_value = previous.get(key)
                     if previous_value != current_value:
                         conflict_errors.append(key)
                         continue
@@ -1529,6 +1538,7 @@ def executive_summary(request):
     return render(request, 'main/executive_summary.html', context)
 
 
+@never_cache
 @json_view
 def event_livehits(request, id):
     event = get_object_or_404(Event, id=id)
@@ -1569,6 +1579,7 @@ def event_livehits(request, id):
     return {'hits': total_hits}
 
 
+@never_cache
 @json_view
 def event_status(request, slug):
     cache_key = 'event_status_{0}'.format(hashlib.md5(slug).hexdigest())
@@ -1593,3 +1604,21 @@ def god_mode(request):
 
     context = {}
     return render(request, 'main/god_mode.html', context)
+
+
+@json_view
+def thumbnails(request):
+    form = forms.ThumbnailsForm(request.GET)
+    if not form.is_valid():
+        return http.HttpResponseBadRequest(form.errors)
+    id = form.cleaned_data['id']
+    width = form.cleaned_data['width']
+    height = form.cleaned_data['height']
+    geometry = '%sx%s' % (width, height)
+    event = get_object_or_404(Event, id=id)
+    thumbnails = []
+    for picture in Picture.objects.filter(event=event).order_by('created'):
+        thumb = thumbnail(picture.file, geometry, crop='center')
+        thumbnails.append(thumb.url)
+
+    return {'thumbnails': thumbnails}

@@ -15,14 +15,11 @@ from airmozilla.base.tests.testbase import DjangoTestCase
 
 
 class TestSearch(DjangoTestCase):
-    fixtures = ['airmozilla/manage/tests/main_testdata.json']
     placeholder_path = 'airmozilla/manage/tests/firefox.png'
     placeholder = os.path.basename(placeholder_path)
 
     def test_basic_search(self):
         Event.objects.all().delete()
-
-        self._upload_media(self.placeholder_path)
 
         today = timezone.now()
         event = Event.objects.create(

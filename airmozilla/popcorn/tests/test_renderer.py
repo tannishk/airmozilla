@@ -14,7 +14,6 @@ from airmozilla.popcorn.models import PopcornEdit
 
 
 class TestPopcornRender(DjangoTestCase):
-    fixtures = ['airmozilla/manage/tests/main_testdata.json']
 
     @mock.patch('airmozilla.manage.vidly.urllib2')
     @mock.patch('airmozilla.popcorn.renderer.Key')
@@ -68,19 +67,33 @@ class TestPopcornRender(DjangoTestCase):
         p_key.side_effect = make_mock_key
 
         event = Event.objects.get(title='Test event')
+        event.template.name = 'Vid.ly Template'
+        event.template.save()
+
+        VidlySubmission.objects.create(
+            event=event,
+            tag='abc123',
+            url='http://s3.com/file.mpg',
+            hd=True,
+            token_protection=False
+        )
 
         edit = PopcornEdit.objects.create(
             event=event,
             status=PopcornEdit.STATUS_PENDING,
-            data={},
+            data={'background': '#000', 'data': {}},
             user=event.creator,
         )
 
         render_edit(edit.id)
 
-        vidly_submission = VidlySubmission.objects.get(
-             event=event,
+        assert VidlySubmission.objects.filter(event=event).count() == 2
+        vidly_submission, = (
+            VidlySubmission.objects
+            .filter(event=event)
+            .order_by('-submission_time')[:1]
         )
+        assert vidly_submission.tag != 'abc123'  # the original was 'abc123'
 
         edit = PopcornEdit.objects.get(id=edit.id)
 
